@@ -37,4 +37,11 @@ interface ILoot {
             uint256,
             uint256
         );
+
+    function mintItemFor(address user, uint8 itemType)
+        external
+        payable
+        returns (uint256);
+
+    function totalSupply() external returns (uint256);
 }

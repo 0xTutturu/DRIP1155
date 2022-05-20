@@ -28,18 +28,15 @@ contract Loot is ERC1155G, ReentrancyGuard, Ownable {
      */
 
     uint256 startIndex = 2;
-    uint256 public totalSupplyItems;
+    uint256 public totalSupply;
     uint256 mintLimit = 1;
-    uint256 price = 0.01 ether;
 
     address dungeonRaidContract;
     // NFT INTERFACE NEEDED
 
     mapping(address => mapping(uint256 => uint256)) public userMintedOfType;
 
-    constructor(string memory uri, address raidContract) ERC1155G(uri) {
-        dungeonRaidContract = raidContract;
-    }
+    constructor(string memory uri) ERC1155G(uri) {}
 
     /* ----- User interaction ----- */
 
@@ -47,15 +44,20 @@ contract Loot is ERC1155G, ReentrancyGuard, Ownable {
      * @dev
      * TODO: Check if the data of _mint should be empty
      */
-    function mintItem(uint8 itemType) external payable nonReentrant {
+    function mintItemFor(address user, uint8 itemType)
+        external
+        payable
+        nonReentrant
+        returns (uint256)
+    {
         if (itemType > 4 || itemType < 2) revert InvalidType();
-        if (userMintedOfType[msg.sender][itemType] >= mintLimit)
+        if (userMintedOfType[user][itemType] >= mintLimit)
             revert MintLimitReached();
-        if (msg.value < price) revert ValueTooLow();
-        uint256 index = startIndex + totalSupplyItems;
-        totalSupplyItems += 1;
+        uint256 index = startIndex + totalSupply;
+        totalSupply += 1;
         idToEquipment[index] = Equipment(uint40(1), uint40(5), itemType, false);
-        _mint(msg.sender, index, 1, "");
+        _mint(user, index, 1, "");
+        return index;
     }
 
     /* @notice Used by users to enhance their items power/level
@@ -64,7 +66,7 @@ contract Loot is ERC1155G, ReentrancyGuard, Ownable {
      */
     function enhanceItem(uint256 itemId, uint40 levels) external {
         Equipment memory equipment = idToEquipment[itemId];
-        if (itemId >= startIndex + totalSupplyItems) revert InvalidId();
+        if (itemId >= startIndex + totalSupply) revert InvalidId();
         if (balanceOf(msg.sender, itemId) == 0) revert NotOwner();
 
         // !!! Check if the NFT that has this item equipped is in a raid right now
@@ -101,7 +103,7 @@ contract Loot is ERC1155G, ReentrancyGuard, Ownable {
             uint256 oldPower
         )
     {
-        if (itemId < 2 || itemId >= startIndex + totalSupplyItems)
+        if (itemId < 2 || itemId >= startIndex + totalSupply)
             revert InvalidId();
         Equipment memory newEquipment = idToEquipment[itemId];
 
@@ -151,6 +153,10 @@ contract Loot is ERC1155G, ReentrancyGuard, Ownable {
 
     /* ----- Owner only ----- */
 
+    function setDungeonContract(address dungeon) external onlyOwner {
+        dungeonRaidContract = dungeon;
+    }
+
     /* ----- View ----- */
 
     function getEnhancementInfo(uint256 itemId, uint40 levels)
@@ -159,7 +165,7 @@ contract Loot is ERC1155G, ReentrancyGuard, Ownable {
         returns (uint256, uint256)
     {
         Equipment memory equipment = idToEquipment[itemId];
-        if (itemId >= startIndex + totalSupplyItems) revert InvalidId();
+        if (itemId >= startIndex + totalSupply) revert InvalidId();
 
         uint256 totalReqGold;
         uint256 totalPowerIncrease;

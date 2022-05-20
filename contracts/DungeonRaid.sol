@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.10;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -84,7 +84,7 @@ contract DungeonRaid is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
     uint256 baseGoldReward = 100 ether;
     uint256 baseGemReward = 10 ether;
     uint256 expirationTime = 2 days;
-    uint256 proposalTime = 1 days;
+    uint256 proposalTime = 5 minutes;
 
     mapping(uint256 => Dungeon) public dungeons;
     mapping(uint256 => mapping(uint256 => uint256))
@@ -115,6 +115,45 @@ contract DungeonRaid is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
         baseNFT = IRaider(_baseNFT);
         itemsNFT = ILoot(_itemsNFT);
         s_subscriptionId = _subscriptionId;
+    }
+
+    /* ----- MOCK FUNCTIONS ----- */
+
+    function mockGenerateDungeon() external onlyOwner returns (uint256) {
+        uint32 currentId = dungeonId;
+        dungeons[dungeonId++] = Dungeon(
+            currentId,
+            0,
+            uint40(block.timestamp),
+            0,
+            false,
+            DungeonType.COMMON,
+            ProposalStatus.NONE,
+            0,
+            0,
+            0,
+            1000 ether,
+            100 ether
+        );
+        return currentId;
+    }
+
+    function mockExecuteDungeon(uint256 _dungeonId) external onlyOwner {
+        if (_dungeonId >= dungeonId) revert InvalidDungeon();
+        Dungeon memory dungeon = dungeons[_dungeonId];
+        if (dungeon.status != ProposalStatus.ONGOING) revert InvalidDungeon();
+        if (block.timestamp < dungeon.proposalTimestamp + proposalTime)
+            revert NotExecutionTime();
+        uint256 basePower = basePowerRequired *
+            ((10 * uint256(dungeon.dungeonType))**3) +
+            basePowerRequired;
+        if (dungeon.totalPower < basePower) {
+            dungeon.status = ProposalStatus.FAILED;
+        } else {
+            dungeon.status = ProposalStatus.PASSED;
+            dungeon.cleared = true;
+        }
+        dungeons[_dungeonId] = dungeon;
     }
 
     function generateDungeon() external onlyOwner {
@@ -190,6 +229,7 @@ contract DungeonRaid is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
 
         dungeon.totalPower += tokenPower;
         dungeonParticipantPower[_dungeonId][_tokenId] = tokenPower;
+        dungeons[_dungeonId] = dungeon;
 
         baseNFT.joinRaid(_tokenId);
     }
@@ -200,11 +240,11 @@ contract DungeonRaid is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
         if (dungeon.status != ProposalStatus.ONGOING) revert InvalidDungeon();
         if (block.timestamp < dungeon.proposalTimestamp + proposalTime)
             revert NotExecutionTime();
+        uint256 basePower = basePowerRequired *
+            ((10 * uint256(dungeon.dungeonType))**3) +
+            basePowerRequired;
 
-        if (
-            dungeon.totalPower <
-            (basePowerRequired * (2**uint256(dungeon.dungeonType)))
-        ) {
+        if (dungeon.totalPower < basePower) {
             dungeon.status = ProposalStatus.FAILED;
         } else {
             uint256 requestId = requestRandomWords();
@@ -212,6 +252,7 @@ contract DungeonRaid is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
             dungeon.execRequestId = requestId;
             dungeon.executeTimestamp = uint40(block.timestamp);
         }
+        dungeons[_dungeonId] = dungeon;
     }
 
     function claimReward(uint32 _dungeonId, uint256 _tokenId)
@@ -390,18 +431,20 @@ contract DungeonRaid is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
             ];
             uint256 randNumber = randomWords[0];
 
-            uint256 maxPower = basePowerRequired *
+            uint256 maxPower = (basePowerRequired *
                 ((10 * uint256(dungeon.dungeonType))**3) +
-                basePowerRequired;
+                basePowerRequired) * 4;
             if (dungeon.totalPower >= maxPower) {
                 // Give max percentage
                 uint256 percentage = 95 - (5 * uint256(dungeon.dungeonType));
                 if (randNumber % 100 < percentage) {
                     // WIN
                     dungeon.status == ProposalStatus.PASSED;
+                    dungeon.cleared = true;
                 } else {
                     // LOSE
                     dungeon.status == ProposalStatus.FAILED;
+                    dungeon.cleared = false;
                 }
             } else {
                 // Calculate percentage
@@ -412,11 +455,15 @@ contract DungeonRaid is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
                 if (randNumber % 100 < percentage) {
                     // WIN
                     dungeon.status == ProposalStatus.PASSED;
+                    dungeon.cleared = true;
                 } else {
                     // LOSE
                     dungeon.status == ProposalStatus.FAILED;
+                    dungeon.cleared = false;
                 }
             }
+
+            dungeons[dungeon.id] = dungeon;
         }
     }
 }

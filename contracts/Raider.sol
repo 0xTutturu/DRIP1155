@@ -18,18 +18,39 @@ contract Raider is ERC721G, ReentrancyGuard, Ownable {
     ILoot public lootContract;
     address dungeonRaidContract;
 
-    constructor(address lootContract_, address dungeonRaid_)
-        ERC721G("Raiders", "RAID", 1, 10000, 3)
-    {
+    constructor(address lootContract_) ERC721G("Raiders", "RAID", 1, 10000, 3) {
         lootContract = ILoot(lootContract_);
-        dungeonRaidContract = dungeonRaid_;
     }
 
     /* ------------- User interaction ------------- */
 
     function mint(uint256 quantity) external payable nonReentrant {
-        if (msg.value < price) revert ValueTooLow();
+        if (msg.value < price * quantity) revert ValueTooLow();
         _mint(msg.sender, quantity);
+    }
+
+    // This function is only used to simplify the frontend work
+    // Would not be the way I would do it in production
+    function mintWithItems() external payable nonReentrant {
+        if (msg.value < price) revert ValueTooLow();
+        uint256 id = startingIndex + totalSupply;
+        uint256 itemId = 2 + lootContract.totalSupply();
+        uint256[3] memory equipped;
+        _mint(msg.sender, 1);
+        TokenData memory token = _tokenDataOf(id);
+
+        for (uint256 i; i < 3; i++) {
+            lootContract.mintItemFor(msg.sender, uint8(2 + i));
+            (uint256 index, uint256 newPower, uint256 oldPower) = lootContract
+                .equipItem(equippedItems[id], itemId, msg.sender);
+
+            token.power -= uint40(oldPower);
+            token.power += uint40(newPower);
+            equipped[index] = itemId;
+            itemId++;
+        }
+        _tokenData[id] = token;
+        equippedItems[id] = equipped;
     }
 
     function useExpGems(uint256 tokenId, uint16 levels)
@@ -120,6 +141,10 @@ contract Raider is ERC721G, ReentrancyGuard, Ownable {
 
     function setLootContract(address loot) external onlyOwner {
         lootContract = ILoot(loot);
+    }
+
+    function setDungeonContract(address dungeon) external onlyOwner {
+        dungeonRaidContract = dungeon;
     }
 
     function setBaseURI(string memory uri) external onlyOwner {
