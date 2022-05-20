@@ -13,7 +13,24 @@ var time = centerTime();
 
 const getBalance = ethers.provider.getBalance;
 
-describe("All contracts", function () {
+describe.only("Rinkeby", function () {
+	let dungeonRinkeby, owner;
+	beforeEach(async function () {
+		[owner] = await ethers.getSigners();
+		dungeonRinkeby = await ethers.getContractAt(
+			"DungeonRaid",
+			0x530a9aea397afbffd9360da00e45073e417bdfaf
+		);
+	});
+
+	it("Should not fail generation", async function () {
+		await expect(
+			dungeonRinkeby.connect(owner).generateDungeon()
+		).to.be.revertedWith("something");
+	});
+});
+
+/* describe("All contracts", function () {
 	let loot, raider, dungeon, owner, addr1, addr2;
 	beforeEach(async function () {
 		[owner, addr1, addr2] = await ethers.getSigners();
@@ -59,8 +76,16 @@ describe("All contracts", function () {
 		});
 	});
 
-	describe.only("DungeonRaid", async function () {
+	describe("DungeonRaid", async function () {
 		beforeEach(async function () {
+			await expect(loot.setDungeonContract(dungeon.address)).to.not.be.reverted;
+			await expect(loot.setRaiderContract(raider.address)).to.not.be.reverted;
+
+			await expect(raider.setLootContract(loot.address)).to.not.be.reverted;
+			await expect(
+				raider.setDungeonContract(dungeon.address)
+			).to.not.be.reverted;
+
 			await expect(
 				raider.mintWithItems({ value: ethers.utils.parseEther("0.02") })
 			).to.not.be.reverted;
@@ -69,17 +94,16 @@ describe("All contracts", function () {
 					.connect(addr1)
 					.mintWithItems({ value: ethers.utils.parseEther("0.02") })
 			).to.not.be.reverted;
-			loot.setDungeonContract(dungeon.address);
-			raider.setLootContract(loot.address);
-			raider.setDungeonContract(dungeon.address);
 		});
 
 		describe("mockGenerateDungeon", async function () {
 			it("Should not revert and print dungeon", async function () {
 				await expect(dungeon.mockGenerateDungeon()).to.not.be.reverted;
-				console.log(await dungeon.dungeons(1));
+				//console.log(await dungeon.dungeons(1));
 			});
 		});
+
+		
 
 		// Minting multiple items returns an increased power for the next item minted
 		describe("proposeDungeon", async function () {
@@ -104,7 +128,7 @@ describe("All contracts", function () {
 				console.log(await dungeon.dungeons(1));
 			});
 
-			it.only("Should correctly execute dungeon", async function () {
+			it("Should correctly execute dungeon", async function () {
 				await expect(dungeon.mockGenerateDungeon()).to.not.be.reverted;
 				await expect(dungeon.connect(addr1).proposeDungeon(1, 2)).to.not.be
 					.reverted;
@@ -123,4 +147,4 @@ describe("All contracts", function () {
 			});
 		});
 	});
-});
+}); */

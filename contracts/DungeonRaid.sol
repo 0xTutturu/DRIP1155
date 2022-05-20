@@ -23,6 +23,8 @@ error DungeonNotCleared();
 error TokenAlreadyRaiding();
 error TokenNotInRaidParty();
 
+// RINKEBY: 0x8Ee1245F699df20E31F4A78Bf526d8E2cF1DD04b
+
 contract DungeonRaid is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
     enum DungeonType {
         COMMON, // 95% clear on max power, 50% on min power, reward multiplier x1, average power 10
@@ -93,12 +95,12 @@ contract DungeonRaid is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
 
     // VRF Setup
     VRFCoordinatorV2Interface COORDINATOR;
-    uint64 s_subscriptionId;
-    address vrfCoordinator = 0x6168499c0cFfCaCD319c818142124B7A15E857ab; // Rinkeby
-    bytes32 keyHash =
+    uint64 public s_subscriptionId;
+    address public vrfCoordinator = 0x6168499c0cFfCaCD319c818142124B7A15E857ab; // Rinkeby
+    bytes32 public keyHash =
         0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc; // Rinkeby
-    uint32 public callbackGasLimit = 100000;
-    uint16 requestConfirmations = 3;
+    uint32 public callbackGasLimit = 200000;
+    uint16 public requestConfirmations = 3;
     uint32 public numWords = 3;
     uint256 public s_requestId;
 
@@ -154,6 +156,14 @@ contract DungeonRaid is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
             dungeon.cleared = true;
         }
         dungeons[_dungeonId] = dungeon;
+    }
+
+    function setCallbackGasLimit(uint32 amount) public onlyOwner {
+        callbackGasLimit = amount;
+    }
+
+    function setS_subscriptionId(uint64 id) public onlyOwner {
+        s_subscriptionId = id;
     }
 
     function generateDungeon() external onlyOwner {

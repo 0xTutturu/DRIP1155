@@ -29,7 +29,8 @@ interface ILoot {
     function equipItem(
         uint256[3] memory equippedItems,
         uint256 itemId,
-        address user
+        address user,
+        uint256 raiderId
     )
         external
         returns (

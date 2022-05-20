@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./libs/ERC1155G.sol";
+import "./IRaider.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -13,6 +14,9 @@ error ArraysNotEqualLength();
 error ValueTooLow();
 error InvalidType();
 error ItemIsEquipped();
+error CharacterIsInRaid();
+
+// RINKEBY: 0xBC3bFa779702A9619beD950EeBd46Cad81c764E6
 
 contract Loot is ERC1155G, ReentrancyGuard, Ownable {
     /* 
@@ -32,9 +36,10 @@ contract Loot is ERC1155G, ReentrancyGuard, Ownable {
     uint256 mintLimit = 1;
 
     address dungeonRaidContract;
-    // NFT INTERFACE NEEDED
+    IRaider raiderContract;
 
     mapping(address => mapping(uint256 => uint256)) public userMintedOfType;
+    mapping(uint256 => uint256) public equippedOn;
 
     constructor(string memory uri) ERC1155G(uri) {}
 
@@ -70,6 +75,11 @@ contract Loot is ERC1155G, ReentrancyGuard, Ownable {
         if (balanceOf(msg.sender, itemId) == 0) revert NotOwner();
 
         // !!! Check if the NFT that has this item equipped is in a raid right now
+        uint256 id = equippedOn[itemId];
+        if (id != 0) {
+            (, , bool raiding, ) = raiderContract.getTokenInfo(id);
+            if (raiding) revert CharacterIsInRaid();
+        }
 
         uint256 totalReqGold;
         uint256 totalPowerIncrease;
@@ -94,7 +104,8 @@ contract Loot is ERC1155G, ReentrancyGuard, Ownable {
     function equipItem(
         uint256[3] memory equippedItems,
         uint256 itemId,
-        address user
+        address user,
+        uint256 raiderId
     )
         external
         returns (
@@ -109,6 +120,7 @@ contract Loot is ERC1155G, ReentrancyGuard, Ownable {
 
         if (newEquipment.equipped) revert ItemIsEquipped();
         if (balanceOf(user, itemId) == 0) revert NotOwner();
+        if (msg.sender != address(raiderContract)) revert NotApprovedContract();
 
         uint256 itemType = uint256(newEquipment.itemType);
         uint256 oldItemId = equippedItems[itemType - 2];
@@ -118,10 +130,12 @@ contract Loot is ERC1155G, ReentrancyGuard, Ownable {
             oldEquipment.equipped = false;
             idToEquipment[oldItemId] = oldEquipment;
             oldPower = oldEquipment.power;
+            equippedOn[oldItemId] = 0;
         } else {
             oldPower = 0;
         }
 
+        equippedOn[itemId] = raiderId;
         newEquipment.equipped = true;
         idToEquipment[itemId] = newEquipment;
 
@@ -155,6 +169,10 @@ contract Loot is ERC1155G, ReentrancyGuard, Ownable {
 
     function setDungeonContract(address dungeon) external onlyOwner {
         dungeonRaidContract = dungeon;
+    }
+
+    function setRaiderContract(address raider) external onlyOwner {
+        raiderContract = IRaider(raider);
     }
 
     /* ----- View ----- */

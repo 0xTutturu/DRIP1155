@@ -11,10 +11,10 @@ async function main() {
 	const raider = await Raider.deploy(loot.address);
 
 	await raider.deployed();
-	console.log("Loot deployed to:", raider.address);
+	console.log("Raider deployed to:", raider.address);
 
 	const Dungeon = await hre.ethers.getContractFactory("DungeonRaid");
-	const dungeon = await Dungeon.deploy(raider.address, loot.address, 1234);
+	const dungeon = await Dungeon.deploy(raider.address, loot.address, 4659);
 
 	await dungeon.deployed();
 	console.log("DungeonRaid deployed to:", dungeon.address);

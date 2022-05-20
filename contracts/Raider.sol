@@ -10,6 +10,8 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 error ValueTooLow();
 error WrongCaller();
 
+// RINKEBY: 0x0Dacbb5F61390eBf614dE3C8F5C7f2560cDFBD4C
+
 contract Raider is ERC721G, ReentrancyGuard, Ownable {
     using Strings for uint256;
 
@@ -42,7 +44,7 @@ contract Raider is ERC721G, ReentrancyGuard, Ownable {
         for (uint256 i; i < 3; i++) {
             lootContract.mintItemFor(msg.sender, uint8(2 + i));
             (uint256 index, uint256 newPower, uint256 oldPower) = lootContract
-                .equipItem(equippedItems[id], itemId, msg.sender);
+                .equipItem(equippedItems[id], itemId, msg.sender, id);
 
             token.power -= uint40(oldPower);
             token.power += uint40(newPower);
@@ -88,7 +90,12 @@ contract Raider is ERC721G, ReentrancyGuard, Ownable {
 
         // Check if user owns the items is done in the loot contract
         (uint256 index, uint256 newPower, uint256 oldPower) = lootContract
-            .equipItem(equippedItems[tokenId], equipmentId, msg.sender);
+            .equipItem(
+                equippedItems[tokenId],
+                equipmentId,
+                msg.sender,
+                tokenId
+            );
         token.power -= uint40(oldPower);
         token.power += uint40(newPower);
         equippedItems[tokenId][index] = equipmentId;
