@@ -20,6 +20,8 @@ error InvalidDungeon();
 error NotExecutionTime();
 error DungeonNotCleared();
 
+error InvalidCaller();
+
 error TokenAlreadyRaiding();
 error TokenNotInRaidParty();
 
@@ -116,6 +118,7 @@ contract DungeonRaid is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
         address _itemsNFT,
         uint16 _subscriptionId
     ) VRFConsumerBaseV2(vrfCoordinator) {
+        COORDINATOR = VRFCoordinatorV2Interface(vrfCoordinator);
         baseNFT = IRaider(_baseNFT);
         itemsNFT = ILoot(_itemsNFT);
         s_subscriptionId = _subscriptionId;
@@ -475,6 +478,7 @@ contract DungeonRaid is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
 
     function requestRandomWords() public returns (uint256) {
         // Will revert if subscription is not set and funded.
+        if (msg.sender != address(this)) revert InvalidCaller();
         uint256 requestId = COORDINATOR.requestRandomWords(
             keyHash,
             s_subscriptionId,
