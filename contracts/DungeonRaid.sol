@@ -108,6 +108,8 @@ contract DungeonRaid is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
     mapping(uint256 => uint256[]) public execRequestIdToRandomWords;
     mapping(uint256 => uint32) public genRequestIdToDungeon;
     mapping(uint256 => uint32) public execRequestIdToDungeon;
+    mapping(uint32 => uint256) public dungeonToGenReqId;
+    mapping(uint32 => uint256) public dungeonToExecReqId;
 
     constructor(
         address _baseNFT,
@@ -170,6 +172,7 @@ contract DungeonRaid is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
         uint256 requestId = requestRandomWords();
         uint32 currentId = dungeonId;
         genRequestIdToDungeon[requestId] = currentId;
+        dungeonToGenReqId[currentId] = requestId;
 
         dungeons[dungeonId++] = Dungeon(
             currentId,
@@ -185,6 +188,27 @@ contract DungeonRaid is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
             0,
             0
         );
+    }
+
+    function discoverDungeon(uint32 _dungeonId) external {
+        uint256 genReqId = dungeonToGenReqId[_dungeonId];
+        uint256[] memory randomWords = genRequestIdToRandomWords[genReqId];
+        Dungeon memory dungeon = dungeons[_dungeonId];
+        Dungeon memory dungeonPost = _getRarity(randomWords, _dungeonId);
+
+        if (dungeon.dungeonType != DungeonType.GENERATING)
+            revert InvalidDungeon();
+        if (_dungeonId >= dungeonId) revert InvalidDungeon();
+
+        (uint256 goldReward, uint256 gemReward) = _getDungeonReward(
+            genReqId,
+            dungeon
+        );
+        // Set rewards
+        dungeonPost.goldReward = goldReward;
+        dungeonPost.gemReward = gemReward;
+        dungeonPost.generatedTimestamp = uint40(block.timestamp);
+        dungeons[dungeon.id] = dungeonPost;
     }
 
     function proposeDungeon(uint32 _dungeonId, uint256 _tokenId)
@@ -259,10 +283,60 @@ contract DungeonRaid is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
         } else {
             uint256 requestId = requestRandomWords();
             execRequestIdToDungeon[requestId] = dungeon.id;
+            dungeonToExecReqId[dungeon.id] = requestId;
             dungeon.execRequestId = requestId;
             dungeon.executeTimestamp = uint40(block.timestamp);
         }
         dungeons[_dungeonId] = dungeon;
+    }
+
+    function finishRaid(uint32 _dungeonId) external nonReentrant {
+        if (_dungeonId >= dungeonId) revert InvalidDungeon();
+
+        Dungeon memory dungeon = dungeons[_dungeonId];
+        if (dungeon.status != ProposalStatus.ONGOING) revert InvalidDungeon();
+        if (block.timestamp < dungeon.proposalTimestamp + proposalTime)
+            revert NotExecutionTime();
+        uint256 execReqId = dungeonToExecReqId[_dungeonId];
+        if (execReqId == 0) revert NotExecutionTime();
+        uint256[] memory randomWords = execRequestIdToRandomWords[execReqId];
+        if (randomWords.length < 3) revert NotExecutionTime();
+
+        uint256 randNumber = randomWords[0];
+
+        uint256 maxPower = (basePowerRequired *
+            ((10 * uint256(dungeon.dungeonType))**3) +
+            basePowerRequired) * 4;
+        if (dungeon.totalPower >= maxPower) {
+            // Give max percentage
+            uint256 percentage = 95 - (5 * uint256(dungeon.dungeonType));
+            if (randNumber % 100 < percentage) {
+                // WIN
+                dungeon.status == ProposalStatus.PASSED;
+                dungeon.cleared = true;
+            } else {
+                // LOSE
+                dungeon.status == ProposalStatus.FAILED;
+                dungeon.cleared = false;
+            }
+        } else {
+            // Calculate percentage
+            uint256 percentage = (dungeon.totalPower * 100) /
+                maxPower -
+                (5 * uint256(dungeon.dungeonType) + 5);
+
+            if (randNumber % 100 < percentage) {
+                // WIN
+                dungeon.status == ProposalStatus.PASSED;
+                dungeon.cleared = true;
+            } else {
+                // LOSE
+                dungeon.status == ProposalStatus.FAILED;
+                dungeon.cleared = false;
+            }
+        }
+
+        dungeons[dungeon.id] = dungeon;
     }
 
     function claimReward(uint32 _dungeonId, uint256 _tokenId)
@@ -343,13 +417,13 @@ contract DungeonRaid is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
             10000);
     }
 
-    function _getRarity(uint256[] memory _randomWords, uint256 _requestId)
+    function _getRarity(uint256[] memory _randomWords, uint256 _dungeonId)
         internal
         view
         returns (Dungeon memory)
     {
         uint256 number = (_randomWords[0] % 100) + 1;
-        Dungeon memory dungeon = dungeons[genRequestIdToDungeon[_requestId]];
+        Dungeon memory dungeon = dungeons[_dungeonId];
         if (number > 45) {
             // Check the common and uncommon rarities
             if (number > 70) {
@@ -421,59 +495,9 @@ contract DungeonRaid is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
         override
     {
         if (genRequestIdToDungeon[requestId] > 0) {
-            // Set the words for the dungeon, set the dungeon rarity
             genRequestIdToRandomWords[requestId] = randomWords;
-            Dungeon memory dungeon = _getRarity(randomWords, requestId);
-            (uint256 goldReward, uint256 gemReward) = _getDungeonReward(
-                requestId,
-                dungeon
-            );
-            // Set rewards
-            dungeon.goldReward = goldReward;
-            dungeon.gemReward = gemReward;
-            dungeon.generatedTimestamp = uint40(block.timestamp);
-            dungeons[dungeon.id] = dungeon;
         } else {
-            // Figure out if the users have won or not
             execRequestIdToRandomWords[requestId] = randomWords;
-            Dungeon memory dungeon = dungeons[
-                execRequestIdToDungeon[requestId]
-            ];
-            uint256 randNumber = randomWords[0];
-
-            uint256 maxPower = (basePowerRequired *
-                ((10 * uint256(dungeon.dungeonType))**3) +
-                basePowerRequired) * 4;
-            if (dungeon.totalPower >= maxPower) {
-                // Give max percentage
-                uint256 percentage = 95 - (5 * uint256(dungeon.dungeonType));
-                if (randNumber % 100 < percentage) {
-                    // WIN
-                    dungeon.status == ProposalStatus.PASSED;
-                    dungeon.cleared = true;
-                } else {
-                    // LOSE
-                    dungeon.status == ProposalStatus.FAILED;
-                    dungeon.cleared = false;
-                }
-            } else {
-                // Calculate percentage
-                uint256 percentage = (dungeon.totalPower * 100) /
-                    maxPower -
-                    (5 * uint256(dungeon.dungeonType) + 5);
-
-                if (randNumber % 100 < percentage) {
-                    // WIN
-                    dungeon.status == ProposalStatus.PASSED;
-                    dungeon.cleared = true;
-                } else {
-                    // LOSE
-                    dungeon.status == ProposalStatus.FAILED;
-                    dungeon.cleared = false;
-                }
-            }
-
-            dungeons[dungeon.id] = dungeon;
         }
     }
 }
