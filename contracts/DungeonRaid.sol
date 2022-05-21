@@ -342,6 +342,21 @@ contract DungeonRaid is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
         dungeons[dungeon.id] = dungeon;
     }
 
+    function exitDungeon(uint32 _dungeonId, uint256 _tokenId) external {
+        if (_dungeonId >= dungeonId) revert InvalidDungeon();
+        Dungeon memory dungeon = dungeons[_dungeonId];
+        if (dungeon.status != ProposalStatus.FAILED) revert InvalidDungeon();
+        (address tokenOwner, , , bool tokenDelegated) = baseNFT.getTokenInfo(
+            _tokenId
+        );
+        if (tokenOwner != msg.sender) revert NotTokenOwner();
+        if (dungeonParticipantPower[_dungeonId][_tokenId] == 0)
+            revert TokenNotInRaidParty();
+        dungeonParticipantPower[_dungeonId][_tokenId] = 0;
+
+        baseNFT.exitRaid(_tokenId);
+    }
+
     function claimReward(uint32 _dungeonId, uint256 _tokenId)
         external
         nonReentrant
@@ -476,9 +491,12 @@ contract DungeonRaid is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
         return (goldReward, gemReward);
     }
 
-    function requestRandomWords() public returns (uint256) {
+    function req() public returns (uint256) {
+        return requestRandomWords();
+    }
+
+    function requestRandomWords() internal returns (uint256) {
         // Will revert if subscription is not set and funded.
-        if (msg.sender != address(this)) revert InvalidCaller();
         uint256 requestId = COORDINATOR.requestRandomWords(
             keyHash,
             s_subscriptionId,
