@@ -16,7 +16,7 @@ error InvalidType();
 error ItemIsEquipped();
 error CharacterIsInRaid();
 
-// RINKEBY: 0xBC3bFa779702A9619beD950EeBd46Cad81c764E6
+// RINKEBY: 0xdCa2A3dF61dC8D526D48872aD49a5D047D751aC9
 
 contract Loot is ERC1155G, ReentrancyGuard, Ownable {
     /* 

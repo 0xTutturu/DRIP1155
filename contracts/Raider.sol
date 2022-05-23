@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 error ValueTooLow();
 error WrongCaller();
 
-// RINKEBY: 0x0Dacbb5F61390eBf614dE3C8F5C7f2560cDFBD4C
+// RINKEBY: 0x387ED53DeedB64F8667aA2300665074D0bFb4861
 
 contract Raider is ERC721G, ReentrancyGuard, Ownable {
     using Strings for uint256;

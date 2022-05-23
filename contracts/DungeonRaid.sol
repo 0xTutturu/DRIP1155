@@ -25,7 +25,7 @@ error InvalidCaller();
 error TokenAlreadyRaiding();
 error TokenNotInRaidParty();
 
-// RINKEBY: 0x8Ee1245F699df20E31F4A78Bf526d8E2cF1DD04b
+// RINKEBY: 0x732393257F1cAC5FB91DBb8d31b6a7a858e26130
 
 contract DungeonRaid is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
     enum DungeonType {

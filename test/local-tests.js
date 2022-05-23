@@ -13,20 +13,35 @@ var time = centerTime();
 
 const getBalance = ethers.provider.getBalance;
 
-describe.only("Rinkeby", function () {
-	let dungeonRinkeby, owner;
+describe("ERC1155Drip", function () {
+	let erc1155, owner, addr1;
 	beforeEach(async function () {
-		[owner] = await ethers.getSigners();
-		dungeonRinkeby = await ethers.getContractAt(
-			"DungeonRaid",
-			0x530a9aea397afbffd9360da00e45073e417bdfaf
-		);
+		[owner, addr1] = await ethers.getSigners();
+
+		const ERC1155 = await hre.ethers.getContractFactory("DRIP");
+		erc1155 = await ERC1155.deploy(2, [10, 20]);
+		await erc1155.deployed();
 	});
 
-	it("Should not fail generation", async function () {
-		await expect(
-			dungeonRinkeby.connect(owner).generateDungeon()
-		).to.be.revertedWith("something");
+	describe("Minting", async function () {
+		it("Should mint fungible tokens", async function () {
+			let amount = ethers.utils.parseEther("1");
+			await expect(erc1155.mint(owner.address, 0, amount)).to.not.be.reverted;
+			expect(await erc1155.balanceOf(owner.address, 0)).to.equal(amount);
+			await expect(
+				erc1155.safeTransferFrom(owner.address, addr1.address, 0, amount, "0x")
+			).to.not.be.reverted;
+		});
+
+		/* it("Should burn fungible tokens", async function () {
+			await expect(erc1155.mint(owner.address, 0, ethers.utils.parseEther("1")))
+				.to.not.be.reverted;
+			await expect(erc1155.burn(owner.address, 0, ethers.utils.parseEther("1")))
+				.to.not.be.reverted;
+			expect(await erc1155.balanceOf(owner.address, 0)).to.equal(
+				ethers.utils.parseEther("0")
+			);
+		}); */
 	});
 });
 

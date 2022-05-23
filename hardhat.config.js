@@ -1,6 +1,6 @@
 require("@nomiclabs/hardhat-waffle");
-//require("solidity-coverage");
-//require("hardhat-gas-reporter");
+require("solidity-coverage");
+require("hardhat-gas-reporter");
 require("dotenv").config();
 
 /**
