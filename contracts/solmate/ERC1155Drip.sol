@@ -36,10 +36,26 @@ abstract contract ERC1155Drip {
                             EQUIPMENT STORAGE
     //////////////////////////////////////////////////////////////*/
 
+    /* Item Types:
+     * 0 - Gold
+     * 1 - Exp Gems
+     * 2 - Ore
+     * 3 - Skins
+     * 4 - Ingots
+     * 5 - Salts
+     * 6 - Runes
+     * from 7 on - Potions, Enchantments, Recipes, Weapons, Armor, Accessories
+     */
+
     struct Equipment {
-        uint40 level;
-        uint40 power;
-        uint8 itemType;
+        uint40 level; // Level of the item, can also be used as min char level
+        uint24 strength; // Increases power
+        uint24 stamina; // Increases energy
+        uint16 intelligence; // Increases bonuses for supports, increases success rate for potion making
+        uint24 efficiency; // Decreases energy usage by a %, decrease material cost for crafting
+        uint24 luck; // Increases reward distribution, Increases success rate for crafting
+        uint8 boostType; // Either a pure stat boost or a % boost
+        uint16 itemType; // Defines both fungible and non fungible token types
         bool equipped;
     }
 
