@@ -33,37 +33,6 @@ abstract contract ERC1155Drip {
     event URI(string value, uint256 indexed id);
 
     /*//////////////////////////////////////////////////////////////
-                            EQUIPMENT STORAGE
-    //////////////////////////////////////////////////////////////*/
-
-    /* Item Types:
-     * 0 - Gold
-     * 1 - Exp Gems
-     * 2 - Ore
-     * 3 - Skins
-     * 4 - Ingots
-     * 5 - Salts
-     * 6 - Runes
-     * from 7 on - Potions, Enchantments, Recipes, Weapons, Armor, Accessories
-     */
-
-    struct Equipment {
-        uint40 level; // Level of the item, can also be used as min char level
-        uint40 power;
-        uint24 strength; // Increases power
-        uint24 stamina; // Increases energy
-        uint16 intelligence; // Increases bonuses for supports, increases success rate for potion making
-        uint24 efficiency; // Decreases energy usage by a %, decrease material cost for crafting
-        uint24 luck; // Increases reward distribution, Increases success rate for crafting
-        uint8 boostType; // Either a pure stat boost or a % boost
-        uint16 itemType; // Defines both fungible and non fungible token types
-        bool equipped;
-    }
-
-    // Mapping from token ID to equipment struct
-    mapping(uint256 => Equipment) public idToEquipment;
-
-    /*//////////////////////////////////////////////////////////////
                             DRIP STORAGE
     //////////////////////////////////////////////////////////////*/
 
@@ -128,11 +97,6 @@ abstract contract ERC1155Drip {
         );
 
         if (id >= dripIdLimit) {
-            require(
-                !idToEquipment[id].equipped,
-                "Can't transfer equipped item"
-            );
-
             balances[from][id] -= amount;
             balances[to][id] += amount;
         } else {
@@ -190,11 +154,6 @@ abstract contract ERC1155Drip {
             amount = amounts[i];
 
             if (id >= dripIdLimit) {
-                require(
-                    !idToEquipment[id].equipped,
-                    "Can't transfer equipped item"
-                );
-
                 balances[from][id] -= amount;
                 balances[to][id] += amount;
             } else {
@@ -460,8 +419,6 @@ abstract contract ERC1155Drip {
 
         for (uint256 i = 0; i < idsLength; ) {
             if (ids[i] >= dripIdLimit) {
-                Equipment memory equipment = idToEquipment[ids[i]];
-                require(!equipment.equipped, "Can't transfer equipped item");
                 balances[from][ids[i]] -= amounts[i];
             } else {
                 Accruer storage accruer = _tokenAccruers[ids[i]][from];
@@ -472,11 +429,7 @@ abstract contract ERC1155Drip {
 
                 accruer.balance = balanceOf(from, ids[i]) - amounts[i];
 
-                // Cannot underflow because amount can
-                // never be greater than the totalSupply()
-                unchecked {
-                    _tokenCurrAccrued[ids[i]] -= amounts[i];
-                }
+                _tokenCurrAccrued[ids[i]] -= amounts[i];
 
                 // update accruers block number if user was accruing
                 if (accruer.accrualStartBlock != 0) {
@@ -500,8 +453,6 @@ abstract contract ERC1155Drip {
         uint256 amount
     ) internal virtual {
         if (id >= dripIdLimit) {
-            Equipment memory equipment = idToEquipment[id];
-            require(!equipment.equipped, "Can't transfer equipped item");
             balances[from][id] -= amount;
         } else {
             Accruer storage accruer = _tokenAccruers[id][from];
@@ -512,11 +463,7 @@ abstract contract ERC1155Drip {
 
             accruer.balance = balanceOf(from, id) - amount;
 
-            // Cannot underflow because amount can
-            // never be greater than the totalSupply()
-            unchecked {
-                _tokenCurrAccrued[id] -= amount;
-            }
+            _tokenCurrAccrued[id] -= amount;
 
             // update accruers block number if user was accruing
             if (accruer.accrualStartBlock != 0) {

@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./solmate/ERC1155Drip.sol";
+import "./ERC1155Drip.sol";
 
 contract DRIP is ERC1155Drip {
     string _uri;
