@@ -102,6 +102,8 @@ contract Raider is ERC721G, ReentrancyGuard, Ownable {
         _tokenData[tokenId] = token;
     }
 
+    // function drinkPotion() external nonReentrant {}
+
     function joinRaid(uint256 tokenId) external {
         if (msg.sender != dungeonRaidContract) revert WrongCaller();
         TokenData memory token = _tokenDataOf(tokenId);
@@ -121,9 +123,10 @@ contract Raider is ERC721G, ReentrancyGuard, Ownable {
     function tokenURI(uint256 id) public view override returns (string memory) {
         if (!_exists(id)) revert NonexistentToken();
 
-        bytes(baseURI).length > 0
-            ? string(abi.encodePacked(baseURI, id.toString(), ".json"))
-            : "";
+        return
+            bytes(baseURI).length > 0
+                ? string(abi.encodePacked(baseURI, id.toString(), ".json"))
+                : "";
     }
 
     function getTokenInfo(uint256 id)

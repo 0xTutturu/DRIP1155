@@ -49,18 +49,35 @@ abstract contract ERC721G {
         bool approved
     );
 
+    enum Class {
+        RAIDER,
+        SUPPORT,
+        CRAFTER,
+        ALCHEMIST
+    }
+
+    struct Character {
+        uint32 level;
+        uint32 power;
+        uint32 strength;
+        uint32 stamina;
+        uint32 intelligence;
+        uint32 efficiency;
+        uint32 luck;
+        Class class;
+        string name;
+    }
+
     struct TokenData {
         address owner;
-        uint16 level;
-        uint40 power;
         bool raiding;
         bool delegated;
         bool nextTokenDataSet;
+        Character charInfo;
     }
 
     struct UserData {
         uint40 balance;
-        uint40 numRewards;
         uint40 numMinted;
         uint40 numRaiding;
     }
@@ -105,7 +122,81 @@ abstract contract ERC721G {
 
     /* ------------- Internal ------------- */
 
-    function _mint(address to, uint256 quantity) internal {
+    function _getClass(Class class, string memory _name)
+        internal
+        pure
+        returns (Character memory)
+    {
+        uint256 classNum = uint256(class);
+        if (classNum > 1) {
+            if (classNum == 2) {
+                // crafter
+                return
+                    Character(
+                        1,
+                        2,
+                        2, // str
+                        7, // stm
+                        4, // int
+                        5, // eff
+                        5, // luck
+                        class,
+                        _name
+                    );
+            } else {
+                // set stats to alchemist
+                return
+                    Character(
+                        1,
+                        1,
+                        2, // str
+                        4, // stm
+                        10, // int
+                        5, // eff
+                        3, // luck
+                        class,
+                        _name
+                    );
+            }
+        } else {
+            if (classNum == 0) {
+                // set stats to Raider
+                return
+                    Character(
+                        1,
+                        10,
+                        5, // str
+                        5, // stm
+                        1, // int
+                        2, // eff
+                        2, // luck
+                        class,
+                        _name
+                    );
+            } else {
+                // set stats to Support
+                return
+                    Character(
+                        1,
+                        5,
+                        2, // str
+                        3, // stm
+                        7, // int
+                        4, // eff
+                        4, // luck
+                        class,
+                        _name
+                    );
+            }
+        }
+    }
+
+    function _mint(
+        address to,
+        uint256 quantity,
+        Class class,
+        string memory _name
+    ) internal {
         unchecked {
             uint256 supply = totalSupply;
             uint256 startTokenId = startingIndex + supply;
@@ -125,16 +216,17 @@ abstract contract ERC721G {
             // don't update for airdrops
             if (to == msg.sender) userData.numMinted += uint40(quantity);
 
+            Character memory char = _getClass(class, _name);
+
             // don't have to care about next token data if only minting one
             // could optimize to implicitly flag last token id of batch
             // if (quantity == 1) tokenData.nextTokenDataSet = true;
             TokenData memory tokenData = TokenData(
                 to,
-                uint16(1),
-                uint32(10),
                 false,
                 false,
-                quantity == 1
+                quantity == 1,
+                char
             );
 
             userData.balance += uint40(quantity);

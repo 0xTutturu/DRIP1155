@@ -49,6 +49,7 @@ abstract contract ERC1155Drip {
 
     struct Equipment {
         uint40 level; // Level of the item, can also be used as min char level
+        uint40 power;
         uint24 strength; // Increases power
         uint24 stamina; // Increases energy
         uint16 intelligence; // Increases bonuses for supports, increases success rate for potion making
