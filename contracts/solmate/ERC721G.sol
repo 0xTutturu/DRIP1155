@@ -351,18 +351,15 @@ abstract contract ERC721G {
         if (_tokenData[id].owner != address(0)) revert AlreadyMinted();
 
         Character memory char = _getChar(class, _name);
-        UserData memory userData = _userData[to];
 
         // Counter overflow is incredibly unrealistic.
         unchecked {
-            userData.balance++;
-            userData.minted++;
+            _userData[to].balance++;
+            _userData[to].minted++;
             totalSupply++;
         }
 
-        TokenData memory tokenData = TokenData(to, false, false, char);
-
-        _tokenData[id] = tokenData;
+        _tokenData[id] = TokenData(to, false, false, char);
 
         emit Transfer(address(0), to, id);
     }

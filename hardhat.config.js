@@ -82,7 +82,7 @@ module.exports = {
 	gasReporter: {
 		coinmarketcap: "7c6dba17-dc6a-42db-996b-9587eaffc8e8",
 		token: "ETH",
-		gasPrice: 200,
+		gasPrice: 100,
 		/* token: "BNB",
     gasPrice: 10,
     token: "MATIC",

@@ -14,34 +14,48 @@ var time = centerTime();
 const getBalance = ethers.provider.getBalance;
 
 describe("ERC1155Drip", function () {
-	let erc1155, owner, addr1;
+	let erc1155, owner, addr1, loot, raider, dungeon;
 	beforeEach(async function () {
 		[owner, addr1] = await ethers.getSigners();
 
-		const ERC1155 = await hre.ethers.getContractFactory("DRIP");
+		/* const ERC1155 = await hre.ethers.getContractFactory("DRIP");
 		erc1155 = await ERC1155.deploy(2, [10, 20]);
-		await erc1155.deployed();
+		await erc1155.deployed(); */
+
+		const Loot = await hre.ethers.getContractFactory("Loot");
+		loot = await Loot.deploy([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+
+		await loot.deployed();
+		console.log("Loot deployed to:", loot.address);
+
+		const Raider = await hre.ethers.getContractFactory("Raider");
+		raider = await Raider.deploy(loot.address, 10, 5010);
+
+		await raider.deployed();
+		console.log("Raider deployed to:", raider.address);
+
+		const Dungeon = await hre.ethers.getContractFactory("DungeonRaid");
+		dungeon = await Dungeon.deploy(
+			raider.address,
+			loot.address,
+			4659,
+			[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+			[
+				[1, 2],
+				[3, 4],
+				[5, 6],
+				[7, 8],
+			]
+		);
+		await dungeon.deployed();
 	});
 
 	describe("Minting", async function () {
-		it("Should mint fungible tokens", async function () {
-			let amount = ethers.utils.parseEther("1");
-			await expect(erc1155.mint(owner.address, 0, amount)).to.not.be.reverted;
-			expect(await erc1155.balanceOf(owner.address, 0)).to.equal(amount);
+		it("Should mint", async function () {
 			await expect(
-				erc1155.safeTransferFrom(owner.address, addr1.address, 0, amount, "0x")
+				raider.mint(0, "tesla", { value: ethers.utils.parseEther("0.02") })
 			).to.not.be.reverted;
 		});
-
-		/* it("Should burn fungible tokens", async function () {
-			await expect(erc1155.mint(owner.address, 0, ethers.utils.parseEther("1")))
-				.to.not.be.reverted;
-			await expect(erc1155.burn(owner.address, 0, ethers.utils.parseEther("1")))
-				.to.not.be.reverted;
-			expect(await erc1155.balanceOf(owner.address, 0)).to.equal(
-				ethers.utils.parseEther("0")
-			);
-		}); */
 	});
 });
 

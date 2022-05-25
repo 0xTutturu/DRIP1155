@@ -263,8 +263,8 @@ abstract contract ERC721G {
             if (tokenData.owner != address(0)) {
                 if (tokenId == curr) return tokenData;
                 tokenData.raiding = false;
-                tokenData.level = 1;
-                tokenData.power = 10;
+                tokenData.charInfo.level = 1;
+                tokenData.charInfo.power = 10;
                 return tokenData;
             }
         }
@@ -331,7 +331,7 @@ abstract contract ERC721G {
         uint256 totalPowerIncrease;
         for (uint256 i; i < levels; i++) {
             (uint256 reqGems, uint256 powerIncrease) = _levelUpInfo(
-                token.level + i
+                token.charInfo.level + i
             );
             totalReqGems += reqGems;
             totalPowerIncrease += powerIncrease;

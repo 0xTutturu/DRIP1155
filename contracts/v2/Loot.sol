@@ -226,6 +226,7 @@ contract Loot is ERC1155Drip, ReentrancyGuard, Ownable {
         // Weapons require 3 ingots and 2 leathers
         // Armor requires 2 ingots and 2 leathers
         // Accessory requires 2 ingots and 1 leather
+        // Every 3 stat points it increases the level req
         (uint256 baseIngots, uint256 baseLeathers) = _getBaseMaterialCost(
             _type
         );
@@ -236,6 +237,7 @@ contract Loot is ERC1155Drip, ReentrancyGuard, Ownable {
                 ++i;
             }
         }
+        uint256 level = totalStats / 3;
     }
 
     function _getBaseMaterialCost(uint256 _type)
@@ -252,6 +254,19 @@ contract Loot is ERC1155Drip, ReentrancyGuard, Ownable {
         } else {
             revert InvalidType();
         }
+    }
+
+    function _getReqMaterials(
+        uint256 level,
+        uint256 ingots,
+        uint256 leathers
+    ) internal pure returns (uint256, uint256) {
+        uint256 baseIngots = (1 * (level ^ 3) + 80 * (level ^ 2) + 20 * 4) /
+            100 +
+            ingots;
+        uint256 baseLeathers = (1 * (level ^ 3) + 80 * (level ^ 2) + 20 * 4) /
+            100 +
+            leathers;
     }
 
     function _calcEnhancement(uint256 level, uint16 itemType)

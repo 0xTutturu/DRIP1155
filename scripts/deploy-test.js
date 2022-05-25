@@ -14,7 +14,18 @@ async function main() {
 	console.log("Raider deployed to:", raider.address);
 
 	const Dungeon = await hre.ethers.getContractFactory("DungeonRaid");
-	const dungeon = await Dungeon.deploy(raider.address, loot.address, 4659);
+	const dungeon = await Dungeon.deploy(
+		raider.address,
+		loot.address,
+		4659,
+		[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+		[
+			[1, 2],
+			[3, 4],
+			[5, 6],
+			[7, 8],
+		]
+	);
 
 	await dungeon.deployed();
 	console.log("DungeonRaid deployed to:", dungeon.address);

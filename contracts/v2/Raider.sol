@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "../solmate/ERC721G.sol";
-import "../ILoot.sol";
+import "./ILoot.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
@@ -21,7 +21,7 @@ contract Raider is ERC721G, ReentrancyGuard, Ownable {
     uint256 public price = 0.02 ether;
     uint256 public maxSupply;
     uint256 public startingIndex;
-    uint256 public maxMint;
+    uint256 public maxMint = 1;
 
     ILoot public lootContract;
     address dungeonRaidContract;
