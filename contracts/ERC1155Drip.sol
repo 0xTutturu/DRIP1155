@@ -438,7 +438,9 @@ abstract contract ERC1155Drip {
 
                 accruer.balance = balanceOf(from, ids[i]) - amounts[i];
 
-                emission._currAccrued -= amounts[i];
+                unchecked {
+                    emission._currAccrued -= amounts[i];
+                }
 
                 // update accruers block number if user was accruing
                 if (accruer.accrualStartBlock != 0) {
@@ -473,7 +475,9 @@ abstract contract ERC1155Drip {
 
             accruer.balance = balanceOf(from, id) - amount;
 
-            emission._currAccrued -= amount;
+            unchecked {
+                emission._currAccrued -= amount;
+            }
 
             // update accruers block number if user was accruing
             if (accruer.accrualStartBlock != 0) {
