@@ -1,7 +1,7 @@
 require("@nomiclabs/hardhat-waffle");
 require("hardhat-contract-sizer");
 require("solidity-coverage");
-//require("hardhat-gas-reporter");
+require("hardhat-gas-reporter");
 require("dotenv").config();
 
 /**
