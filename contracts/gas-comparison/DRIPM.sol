@@ -1,13 +1,13 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./ERC1155Drip.sol";
+import "./ERC1155M.sol";
 
-contract DRIP is ERC1155Drip {
+contract DRIPM is ERC1155M {
     string _uri;
 
-    constructor(uint256 limit, uint168[] memory emissionRates)
-        ERC1155Drip(emissionRates)
+    constructor(uint256 limit, uint256[] memory emissionRates)
+        ERC1155M(emissionRates)
     {}
 
     function startDripping(

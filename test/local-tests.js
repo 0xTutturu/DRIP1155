@@ -19,7 +19,7 @@ async function mineNBlocks(n) {
 	}
 }
 
-describe("ERC1155Drip", function () {
+describe.only("ERC1155Drip", function () {
 	let erc1155, owner, addr1, drip1, drip2;
 	beforeEach(async function () {
 		[owner, addr1] = await ethers.getSigners();
@@ -37,6 +37,7 @@ describe("ERC1155Drip", function () {
 		);
 		await expect(erc1155.startDripping(owner.address, 0, 1)).to.not.be.reverted;
 		await mineNBlocks(10);
+		console.log(await erc1155.balanceOf(owner.address, 0));
 		expect(await erc1155.balanceOf(owner.address, 0)).to.equal(drip1.mul(10));
 	});
 

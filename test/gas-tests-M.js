@@ -19,14 +19,14 @@ async function mineNBlocks(n) {
 	}
 }
 
-describe("Gas tests", function () {
+describe("Gas tests-M", function () {
 	let erc1155, owner, addr1, drip1, drip2;
 	beforeEach(async function () {
 		[owner, addr1] = await ethers.getSigners();
 		drip1 = BN(10);
 		drip2 = BN(20);
 
-		const ERC1155 = await hre.ethers.getContractFactory("DRIP");
+		const ERC1155 = await hre.ethers.getContractFactory("DRIPM");
 		erc1155 = await ERC1155.deploy(2, [drip1, drip2]);
 		await erc1155.deployed();
 	});
