@@ -46,7 +46,7 @@ abstract contract ERC1155Drip {
     mapping(uint256 => uint256) public tokenEmissionRatePerBlock;
 
     // wallets currently getting dripped tokens
-    mapping(uint256 => mapping(address => Accruer)) private _tokenAccruers;
+    mapping(uint256 => mapping(address => Accruer)) public _tokenAccruers;
 
     // these are all for calculating totalSupply()
     mapping(uint256 => uint256) private _tokenCurrAccrued;
@@ -269,6 +269,12 @@ abstract contract ERC1155Drip {
         require(id < dripIdLimit, "Token not drippable");
         Accruer storage accruer = _tokenAccruers[id][account];
 
+        // need to update the balance to start "fresh"
+        // from the updated block and updated multiplier if the addr was already accruing
+        if (accruer.accrualStartBlock != 0) {
+            accruer.balance = balanceOf(account, id);
+        }
+
         _tokenCurrAccrued[id] = totalSupply(id);
         _tokenCurrEmissionBlockNum[id] = block.number;
         accruer.accrualStartBlock = block.number;
@@ -277,12 +283,6 @@ abstract contract ERC1155Drip {
         unchecked {
             _tokenCurrEmissionMultiple[id] += multiplier;
             accruer.multiplier += multiplier;
-        }
-
-        // need to update the balance to start "fresh"
-        // from the updated block and updated multiplier if the addr was already accruing
-        if (accruer.accrualStartBlock != 0) {
-            accruer.balance = balanceOf(account, id);
         }
     }
 
