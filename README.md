@@ -16,7 +16,7 @@ Must define \_emissionRatePerBlock for each drippable token, which determines ho
 
 ### Example Use Cases
 
-DRIP1155.sol was 
+DRIP1155.sol was inspired by the DRIP20 implementations and was initially designed for a dungeon crawler game that has multiple different fungible tokens.
 
 ### Gas usage
 
