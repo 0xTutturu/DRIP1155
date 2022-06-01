@@ -10,7 +10,7 @@ DRIP1155.sol - ERC1155 implementation that supports dripping.
 
 Must define dripIdLimit which determines what IDs are drippable. If dripIdLimit is 2, IDs 0 and 1 can be dripped, while any further IDs can be used either as regular fungible or nonfungible tokens depending on implementation. dripIdLimit is immutable after initialization.
 
-Must define \_emissionRatePerBlock for each drippable token, which determines how many tokens will be dripped into each wallet per block. This value is immutable after initialization.
+Must define emissionRatePerBlock for each drippable token, which determines how many tokens will be dripped into each wallet per block. This value is immutable after initialization.
 
 \_startDripping(address, multiplier) and \_stopDripping(address, , multiplier) increase and decrease a wallets emissions respectively.
 
