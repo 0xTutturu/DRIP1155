@@ -2,7 +2,7 @@ const hre = require("hardhat");
 
 async function main() {
 	const DRIP = await hre.ethers.getContractFactory("DRIP");
-	const drip = await DRIP.deploy(2, [10, 20]);
+	const drip = await DRIP.deploy([10, 20]);
 
 	await drip.deployed();
 	console.log("Drip deployed to:", drip.address);
