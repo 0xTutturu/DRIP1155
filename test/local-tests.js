@@ -19,7 +19,7 @@ async function mineNBlocks(n) {
 	}
 }
 
-describe.only("ERC1155Drip", function () {
+describe("DRIP1155", function () {
 	let erc1155, owner, addr1, drip1, drip2;
 	beforeEach(async function () {
 		[owner, addr1] = await ethers.getSigners();

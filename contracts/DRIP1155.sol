@@ -3,7 +3,7 @@ pragma solidity >=0.8.0;
 
 /// @notice Minimalist and gas efficient standard ERC1155 implementation.
 /// @author Solmate (https://github.com/Rari-Capital/solmate/blob/main/src/tokens/ERC1155.sol)
-abstract contract ERC1155M {
+abstract contract DRIP1155 {
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -37,21 +37,24 @@ abstract contract ERC1155M {
     //////////////////////////////////////////////////////////////*/
 
     struct Accruer {
-        uint256 multiplier;
         uint256 balance;
-        uint256 accrualStartBlock;
+        uint40 multiplier;
+        uint40 accrualStartBlock;
     }
 
-    // immutable token emission rate per block
-    mapping(uint256 => uint256) public tokenEmissionRatePerBlock;
+    struct Emissions {
+        uint256 _currAccrued;
+        uint168 emissionRatePerBlock;
+        uint40 _currEmissionBlockNum;
+        uint40 _currEmissionMultiple;
+    }
 
     // wallets currently getting dripped tokens
     mapping(uint256 => mapping(address => Accruer)) public _tokenAccruers;
 
+    mapping(uint256 => Emissions) private emissions;
+
     // these are all for calculating totalSupply()
-    mapping(uint256 => uint256) private _tokenCurrAccrued;
-    mapping(uint256 => uint256) private _tokenCurrEmissionBlockNum;
-    mapping(uint256 => uint256) private _tokenCurrEmissionMultiple;
     uint256 private immutable dripIdLimit = 2;
 
     /*//////////////////////////////////////////////////////////////
@@ -62,9 +65,13 @@ abstract contract ERC1155M {
 
     mapping(address => mapping(address => bool)) public isApprovedForAll;
 
-    constructor(uint256[] memory emissionRates) {
-        for (uint256 i; i < emissionRates.length; i++) {
-            tokenEmissionRatePerBlock[i] = emissionRates[i];
+    constructor(uint168[] memory emissionRates) {
+        uint256 length = emissionRates.length;
+        for (uint256 i; i < length; ) {
+            emissions[i].emissionRatePerBlock = emissionRates[i];
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -111,7 +118,7 @@ abstract contract ERC1155M {
             }
 
             if (fromAccruer.accrualStartBlock != 0) {
-                fromAccruer.accrualStartBlock = block.number;
+                fromAccruer.accrualStartBlock = uint40(block.number);
             }
         }
 
@@ -145,7 +152,6 @@ abstract contract ERC1155M {
             "NOT_AUTHORIZED"
         );
 
-        // Storing these outside the loop saves ~15 gas per iteration.
         uint256 id;
         uint256 amount;
 
@@ -168,7 +174,7 @@ abstract contract ERC1155M {
                 }
 
                 if (fromAccruer.accrualStartBlock != 0) {
-                    fromAccruer.accrualStartBlock = block.number;
+                    fromAccruer.accrualStartBlock = uint40(block.number);
                 }
             }
 
@@ -215,6 +221,7 @@ abstract contract ERC1155M {
 
         if (id < dripIdLimit) {
             Accruer memory accruer = _tokenAccruers[id][account];
+            Emissions memory emission = emissions[id];
 
             if (accruer.accrualStartBlock == 0) {
                 return accruer.balance;
@@ -222,7 +229,7 @@ abstract contract ERC1155M {
 
             return
                 ((block.number - accruer.accrualStartBlock) *
-                    tokenEmissionRatePerBlock[id]) *
+                    uint256(emission.emissionRatePerBlock)) *
                 accruer.multiplier +
                 accruer.balance;
         }
@@ -254,11 +261,12 @@ abstract contract ERC1155M {
     //////////////////////////////////////////////////////////////*/
 
     function totalSupply(uint256 id) public view returns (uint256) {
+        Emissions memory emission = emissions[id];
         return
-            _tokenCurrAccrued[id] +
-            (block.number - _tokenCurrEmissionBlockNum[id]) *
-            tokenEmissionRatePerBlock[id] *
-            _tokenCurrEmissionMultiple[id];
+            emission._currAccrued +
+            (block.number - uint256(emission._currEmissionBlockNum)) *
+            uint256(emission.emissionRatePerBlock) *
+            uint256(emission._currEmissionMultiple);
     }
 
     function _startDripping(
@@ -268,6 +276,7 @@ abstract contract ERC1155M {
     ) internal virtual {
         require(id < dripIdLimit, "Token not drippable");
         Accruer storage accruer = _tokenAccruers[id][account];
+        Emissions storage emission = emissions[id];
 
         // need to update the balance to start "fresh"
         // from the updated block and updated multiplier if the addr was already accruing
@@ -275,14 +284,14 @@ abstract contract ERC1155M {
             accruer.balance = balanceOf(account, id);
         }
 
-        _tokenCurrAccrued[id] = totalSupply(id);
-        _tokenCurrEmissionBlockNum[id] = block.number;
-        accruer.accrualStartBlock = block.number;
+        emission._currAccrued = totalSupply(id);
+        emission._currEmissionBlockNum = uint40(block.number);
+        accruer.accrualStartBlock = uint40(block.number);
 
         // should not overflow unless you have >2**256-1 items...
         unchecked {
-            _tokenCurrEmissionMultiple[id] += multiplier;
-            accruer.multiplier += multiplier;
+            emission._currEmissionMultiple += uint40(multiplier);
+            accruer.multiplier += uint40(multiplier);
         }
     }
 
@@ -293,22 +302,23 @@ abstract contract ERC1155M {
     ) internal virtual {
         require(id < dripIdLimit, "Token not drippable");
         Accruer storage accruer = _tokenAccruers[id][account];
+        Emissions storage emission = emissions[id];
 
         // should I check for 0 multiplier too
         require(accruer.accrualStartBlock != 0, "user not accruing");
 
         accruer.balance = balanceOf(account, id);
-        _tokenCurrAccrued[id] = totalSupply(id);
-        _tokenCurrEmissionBlockNum[id] = block.number;
+        emission._currAccrued = totalSupply(id);
+        emission._currEmissionBlockNum = uint40(block.number);
 
         // will revert if underflow occurs
-        _tokenCurrEmissionMultiple[id] -= multiplier;
-        accruer.multiplier -= multiplier;
+        emission._currEmissionMultiple -= uint40(multiplier);
+        accruer.multiplier -= uint40(multiplier);
 
         if (accruer.multiplier == 0) {
             accruer.accrualStartBlock = 0;
         } else {
-            accruer.accrualStartBlock = block.number;
+            accruer.accrualStartBlock = uint40(block.number);
         }
     }
 
@@ -342,8 +352,9 @@ abstract contract ERC1155M {
             balances[to][id] += amount;
         } else {
             Accruer storage accruer = _tokenAccruers[id][to];
+
             unchecked {
-                _tokenCurrAccrued[id] += amount;
+                emissions[id]._currAccrued += amount;
                 accruer.balance += amount;
             }
         }
@@ -380,7 +391,7 @@ abstract contract ERC1155M {
             } else {
                 Accruer storage accruer = _tokenAccruers[ids[i]][to];
                 unchecked {
-                    _tokenCurrAccrued[ids[i]] += amounts[i];
+                    emissions[ids[i]]._currAccrued += amounts[i];
                     accruer.balance += amounts[i];
                 }
             }
@@ -422,18 +433,21 @@ abstract contract ERC1155M {
                 balances[from][ids[i]] -= amounts[i];
             } else {
                 Accruer storage accruer = _tokenAccruers[ids[i]][from];
+                Emissions storage emission = emissions[ids[i]];
 
                 // have to update supply before burning
-                _tokenCurrAccrued[ids[i]] = totalSupply(ids[i]);
-                _tokenCurrEmissionBlockNum[ids[i]] = block.number;
+                emission._currAccrued = totalSupply(ids[i]);
+                emission._currEmissionBlockNum = uint40(block.number);
 
                 accruer.balance = balanceOf(from, ids[i]) - amounts[i];
 
-                _tokenCurrAccrued[ids[i]] -= amounts[i];
+                unchecked {
+                    emission._currAccrued -= amounts[i];
+                }
 
                 // update accruers block number if user was accruing
                 if (accruer.accrualStartBlock != 0) {
-                    accruer.accrualStartBlock = block.number;
+                    accruer.accrualStartBlock = uint40(block.number);
                 }
             }
 
@@ -456,18 +470,21 @@ abstract contract ERC1155M {
             balances[from][id] -= amount;
         } else {
             Accruer storage accruer = _tokenAccruers[id][from];
+            Emissions storage emission = emissions[id];
 
             // have to update supply before burning
-            _tokenCurrAccrued[id] = totalSupply(id);
-            _tokenCurrEmissionBlockNum[id] = block.number;
+            emission._currAccrued = totalSupply(id);
+            emission._currEmissionBlockNum = uint40(block.number);
 
             accruer.balance = balanceOf(from, id) - amount;
 
-            _tokenCurrAccrued[id] -= amount;
+            unchecked {
+                emission._currAccrued -= amount;
+            }
 
             // update accruers block number if user was accruing
             if (accruer.accrualStartBlock != 0) {
-                accruer.accrualStartBlock = block.number;
+                accruer.accrualStartBlock = uint40(block.number);
             }
         }
 
